@@ -98,6 +98,18 @@ sync_craft_files() {
     fi
   fi
 
+  # Refresh project-local craft wrapper
+  cat > "$target/craft" << 'WRAPPER'
+#!/usr/bin/env bash
+# craft — project-local wrapper that delegates to the craft repo CLI.
+# This file is craft-owned and will be overwritten by craft update.
+set -euo pipefail
+ORIGIN="$(cat "$(dirname "$0")/.craft-origin")"
+exec "$ORIGIN/bin/craft" "$@"
+WRAPPER
+  chmod +x "$target/craft"
+  echo "  synced: craft (local wrapper)"
+
   # Make hook scripts executable
   find "$target/hooks" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
   find "$target/.claude/hooks" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
@@ -148,6 +160,18 @@ do_bootstrap() {
   echo "$CRAFT_ROOT" > "$target/.craft-origin"
   echo "  created: .craft-origin"
 
+  # Write project-local craft wrapper (craft-owned — overwritten on update)
+  cat > "$target/craft" << 'WRAPPER'
+#!/usr/bin/env bash
+# craft — project-local wrapper that delegates to the craft repo CLI.
+# This file is craft-owned and will be overwritten by craft update.
+set -euo pipefail
+ORIGIN="$(cat "$(dirname "$0")/.craft-origin")"
+exec "$ORIGIN/bin/craft" "$@"
+WRAPPER
+  chmod +x "$target/craft"
+  echo "  created: craft (local wrapper)"
+
   # Initialize git
   echo ""
   if [ -d "$target/.git" ]; then
@@ -169,6 +193,7 @@ do_bootstrap() {
   echo "  ├── DECISION-LOG.md              # Study-owned"
   echo "  ├── PHILOSOPHY.md                # Craft-owned"
   echo "  ├── CRAFT-WORKFLOW.md            # Craft-owned"
+  echo "  ├── craft                        # Local CLI wrapper (runs ./craft update)"
   echo "  ├── .craft-origin                # Points to craft repo"
   echo "  ├── templates/                   # Craft-owned"
   echo "  ├── skills/                      # Craft-owned"
