@@ -79,9 +79,6 @@ sync_craft_files() {
   # Templates
   copy_dir_craft_owned "$CRAFT_ROOT/templates" "$target/templates"
 
-  # Skills
-  copy_dir_craft_owned "$CRAFT_ROOT/skills" "$target/skills"
-
   # Hooks
   copy_dir_craft_owned "$CRAFT_ROOT/hooks" "$target/hooks"
 
@@ -202,9 +199,9 @@ WRAPPER
   echo "  ├── craft                        # Local CLI wrapper (runs ./craft update)"
   echo "  ├── .craft-origin                # Points to craft repo"
   echo "  ├── templates/                   # Craft-owned"
-  echo "  ├── skills/                      # Craft-owned"
   echo "  ├── hooks/                       # Craft-owned"
-  echo "  ├── .claude/                     # Craft-owned"
+  echo "  ├── .claude/skills/              # Craft-owned (slash commands)"
+  echo "  ├── .claude/settings.json        # Craft-owned (hooks config)"
   echo "  ├── methods/                     # Study-owned (your work)"
   echo "  └── data/                        # Study-owned (your data)"
   echo ""
