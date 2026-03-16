@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# craft — CLI for CRAFT (Community for Reproducible AI Frameworks and Tools)
+#
+# Usage:
+#   craft bootstrap <target-directory> [project-name]
+#   craft update
+#
+# bootstrap: Creates a new study project from craft templates.
+# update:    Refreshes craft-owned files in an existing study project.
+
+set -euo pipefail
+
+# ── Resolve craft repo location ──────────────────────────────────────
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CRAFT_ROOT="$(realpath "$SCRIPT_DIR/..")"
+
+# Verify we're in the craft repo
+if [ ! -f "$CRAFT_ROOT/PHILOSOPHY.md" ]; then
+  echo "Error: Cannot find craft repo. Expected PHILOSOPHY.md at $CRAFT_ROOT"
+  exit 1
+fi
+
+# ── Helpers ──────────────────────────────────────────────────────────
+
+copy_craft_owned() {
+  # Always overwrite — these are craft-owned
+  local src="$1"
+  local dst="$2"
+  cp "$src" "$dst"
+  echo "  synced: $(basename "$dst")"
+}
+
+copy_study_owned() {
+  # Never overwrite — these belong to the study
+  local src="$1"
+  local dst="$2"
+  if [ -f "$dst" ]; then
+    echo "  exists (study-owned): $(basename "$dst")"
+  else
+    cp "$src" "$dst"
+    echo "  created: $(basename "$dst")"
+  fi
+}
+
+copy_dir_craft_owned() {
+  # Sync an entire directory (craft-owned — always overwrite)
+  local src="$1"
+  local dst="$2"
+  if [ -d "$src" ]; then
+    mkdir -p "$dst"
+    rsync -a --delete "$src/" "$dst/"
+    echo "  synced: $(basename "$dst")/"
+  fi
+}
+
+mkdir_if_missing() {
+  local dir="$1"
+  if [ -d "$dir" ]; then
+    echo "  exists: $(basename "$dir")/"
+  else
+    mkdir -p "$dir"
+    echo "  created: $(basename "$dir")/"
+  fi
+}
+
+# ── Sync craft-owned files (shared by bootstrap and update) ─────────
+
+sync_craft_files() {
+  local target="$1"
+
+  echo ""
+  echo "Syncing craft-owned files..."
+
+  # Root-level craft-owned docs
+  copy_craft_owned "$CRAFT_ROOT/PHILOSOPHY.md" "$target/PHILOSOPHY.md"
+  copy_craft_owned "$CRAFT_ROOT/CRAFT-WORKFLOW.md" "$target/CRAFT-WORKFLOW.md"
+
+  # Templates
+  copy_dir_craft_owned "$CRAFT_ROOT/templates" "$target/templates"
+
+  # Skills
+  copy_dir_craft_owned "$CRAFT_ROOT/skills" "$target/skills"
+
+  # Hooks
+  copy_dir_craft_owned "$CRAFT_ROOT/hooks" "$target/hooks"
+
+  # Claude Code settings
+  if [ -d "$CRAFT_ROOT/.claude" ]; then
+    mkdir -p "$target/.claude"
+    # Sync hooks subdirectory if it exists
+    if [ -d "$CRAFT_ROOT/.claude/hooks" ]; then
+      copy_dir_craft_owned "$CRAFT_ROOT/.claude/hooks" "$target/.claude/hooks"
+    fi
+    # Always overwrite settings.json (craft-owned)
+    if [ -f "$CRAFT_ROOT/.claude/settings.json" ]; then
+      copy_craft_owned "$CRAFT_ROOT/.claude/settings.json" "$target/.claude/settings.json"
+    fi
+  fi
+
+  # Make hook scripts executable
+  find "$target/hooks" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+  find "$target/.claude/hooks" -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+}
+
+# ── Bootstrap ────────────────────────────────────────────────────────
+
+do_bootstrap() {
+  if [ $# -lt 1 ]; then
+    echo "Usage: craft bootstrap <target-directory> [project-name]"
+    exit 1
+  fi
+
+  local target="$(realpath "$1")"
+  local project_name="${2:-$(basename "$target")}"
+
+  echo "Bootstrapping CRAFT study project: $project_name"
+  echo "Target: $target"
+
+  # Create directory structure
+  echo ""
+  echo "Creating directory structure..."
+  mkdir_if_missing "$target"
+  mkdir_if_missing "$target/methods"
+  mkdir_if_missing "$target/data"
+
+  # Sync craft-owned files
+  sync_craft_files "$target"
+
+  # Create study-owned files from templates
+  echo ""
+  echo "Creating study-owned files..."
+
+  # CLAUDE.md gets project name substituted
+  if [ -f "$target/CLAUDE.md" ]; then
+    echo "  exists (study-owned): CLAUDE.md"
+  else
+    sed "s/{{PROJECT_NAME}}/$project_name/g" \
+      "$CRAFT_ROOT/templates/claude.md" > "$target/CLAUDE.md"
+    echo "  created: CLAUDE.md"
+  fi
+
+  copy_study_owned "$CRAFT_ROOT/templates/study-protocol.md" "$target/STUDY-PROTOCOL.md"
+  copy_study_owned "$CRAFT_ROOT/templates/methods-register.md" "$target/METHODS-REGISTER.md"
+  copy_study_owned "$CRAFT_ROOT/templates/decision-log.md" "$target/DECISION-LOG.md"
+
+  # Record craft origin for update command
+  echo "$CRAFT_ROOT" > "$target/.craft-origin"
+  echo "  created: .craft-origin"
+
+  # Initialize git
+  echo ""
+  if [ -d "$target/.git" ]; then
+    echo "Git repo already exists."
+  else
+    echo "Initializing git repository..."
+    (cd "$target" && git init -q && git branch -m main)
+    echo "  initialized."
+  fi
+
+  # Summary
+  echo ""
+  echo "Done. Study project structure:"
+  echo ""
+  echo "  $target/"
+  echo "  ├── CLAUDE.md                    # Study-owned"
+  echo "  ├── STUDY-PROTOCOL.md            # Study-owned"
+  echo "  ├── METHODS-REGISTER.md          # Study-owned"
+  echo "  ├── DECISION-LOG.md              # Study-owned"
+  echo "  ├── PHILOSOPHY.md                # Craft-owned"
+  echo "  ├── CRAFT-WORKFLOW.md            # Craft-owned"
+  echo "  ├── .craft-origin                # Points to craft repo"
+  echo "  ├── templates/                   # Craft-owned"
+  echo "  ├── skills/                      # Craft-owned"
+  echo "  ├── hooks/                       # Craft-owned"
+  echo "  ├── .claude/                     # Craft-owned"
+  echo "  ├── methods/                     # Study-owned (your work)"
+  echo "  └── data/                        # Study-owned (your data)"
+  echo ""
+  echo "Next steps:"
+  echo "  1. Edit CLAUDE.md with your project overview"
+  echo "  2. Fill in STUDY-PROTOCOL.md"
+  echo "  3. Run /status to see what craft suggests"
+}
+
+# ── Update ───────────────────────────────────────────────────────────
+
+do_update() {
+  # Find .craft-origin in current directory or parents
+  local dir="$(pwd)"
+  while [ "$dir" != "/" ]; do
+    if [ -f "$dir/.craft-origin" ]; then
+      break
+    fi
+    dir="$(dirname "$dir")"
+  done
+
+  if [ ! -f "$dir/.craft-origin" ]; then
+    echo "Error: Not inside a craft study project."
+    echo "Could not find .craft-origin in current directory or any parent."
+    echo ""
+    echo "To create a new study project, run:"
+    echo "  craft bootstrap <target-directory>"
+    exit 1
+  fi
+
+  local craft_origin
+  craft_origin="$(cat "$dir/.craft-origin")"
+
+  if [ ! -d "$craft_origin" ]; then
+    echo "Error: Craft repo not found at $craft_origin"
+    echo "Update .craft-origin to point to the correct location."
+    exit 1
+  fi
+
+  if [ ! -f "$craft_origin/PHILOSOPHY.md" ]; then
+    echo "Error: $craft_origin does not appear to be a craft repo."
+    exit 1
+  fi
+
+  echo "Updating craft-owned files in: $dir"
+  echo "From craft repo: $craft_origin"
+
+  # Use the origin as CRAFT_ROOT for sync (local override)
+  local saved_craft_root="$CRAFT_ROOT"
+  CRAFT_ROOT="$craft_origin"
+  sync_craft_files "$dir"
+  CRAFT_ROOT="$saved_craft_root"
+
+  echo ""
+  echo "Update complete. Study-owned files were not modified."
+}
+
+# ── Main ─────────────────────────────────────────────────────────────
+
+case "${1:-}" in
+  bootstrap)
+    shift
+    do_bootstrap "$@"
+    ;;
+  update)
+    do_update
+    ;;
+  *)
+    echo "CRAFT — Community for Reproducible AI Frameworks and Tools"
+    echo ""
+    echo "Usage:"
+    echo "  craft bootstrap <target-directory> [project-name]"
+    echo "  craft update"
+    echo ""
+    echo "Commands:"
+    echo "  bootstrap    Create a new study project from craft templates"
+    echo "  update       Refresh craft-owned files in the current study project"
+    ;;
+esac
