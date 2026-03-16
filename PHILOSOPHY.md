@@ -17,3 +17,5 @@ Ad hoc AI workflows are no more reproducible than ad hoc manual methods — they
 ## 4. Start by automating the boring stuff
 
 Researchers who do not learn to use AI effectively will spend their finite time on work that is rapidly becoming automatable — manual literature screening, hand extraction of data from charts, routine statistical coding. Their peers who adopt these tools will do the same work in a fraction of the time and redirect their effort toward the parts of research that genuinely require human judgment: asking the right questions, interpreting findings in clinical context, and deciding what matters.
+
+<!-- Last updated: 2026-03-16 -->
