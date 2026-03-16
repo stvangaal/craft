@@ -123,6 +123,8 @@ do_bootstrap() {
     exit 1
   fi
 
+  # Create target directory first so realpath works on macOS
+  mkdir -p "$1"
   local target="$(realpath "$1")"
   local project_name="${2:-$(basename "$target")}"
 
@@ -132,7 +134,7 @@ do_bootstrap() {
   # Create directory structure
   echo ""
   echo "Creating directory structure..."
-  mkdir_if_missing "$target"
+  echo "  exists: $(basename "$target")/"
   mkdir_if_missing "$target/methods"
   mkdir_if_missing "$target/data"
 
