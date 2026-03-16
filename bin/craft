@@ -92,6 +92,10 @@ sync_craft_files() {
     if [ -d "$CRAFT_ROOT/.claude/hooks" ]; then
       copy_dir_craft_owned "$CRAFT_ROOT/.claude/hooks" "$target/.claude/hooks"
     fi
+    # Sync skills subdirectory if it exists
+    if [ -d "$CRAFT_ROOT/.claude/skills" ]; then
+      copy_dir_craft_owned "$CRAFT_ROOT/.claude/skills" "$target/.claude/skills"
+    fi
     # Always overwrite settings.json (craft-owned)
     if [ -f "$CRAFT_ROOT/.claude/settings.json" ]; then
       copy_craft_owned "$CRAFT_ROOT/.claude/settings.json" "$target/.claude/settings.json"
