@@ -2,11 +2,11 @@
 
 ## Project Overview
 
-CRAFT (Community for Reproducible AI Frameworks and Tools) is a toolkit for reproducible AI-assisted research. This repo provides templates, skills, hooks, and a CLI for bootstrapping and maintaining research study projects.
+CRAFT (Community for Reproducible AI Frameworks and Tools) is a toolkit for reproducible AI-assisted research. This repo provides templates and a CLI for bootstrapping and maintaining research study projects.
 
 ## Project Status
 
-Phase 0 — initial scaffolding. CLI (`craft bootstrap`, `craft update`) is functional. Templates and skills are stubs being fleshed out.
+Phase 0 — initial scaffolding. CLI (`craft bootstrap`, `craft update`) is functional. Templates are stubs being fleshed out.
 
 ## Development Workflow
 
@@ -20,8 +20,6 @@ This is the craft tooling repo, not a study project. Changes here propagate to s
 | `CRAFT-WORKFLOW.md` | Governing rules for craft projects |
 | `bin/craft` | CLI entry point |
 | `templates/` | Document templates (Tier 1-3) |
-| `skills/` | Slash-command skills for Claude Code |
-| `hooks/` | Claude Code hooks |
 
 ## CLI Usage
 
