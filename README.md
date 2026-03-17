@@ -46,6 +46,38 @@ This refreshes craft-owned files (workflows, skills) without touching your resea
 
 ## How CRAFT Works
 
+```
+                      ┌───────────────────┐
+                      │   craft (repo)    │
+                      │                   │
+                      │ skills, CLI,      │
+                      │ workflows, docs   │
+                      └──────┬───────┬────┘
+                             │       │
+               craft bootstrap       │
+               (one-time setup)      │
+                             │       │
+                             ▼       │
+    ┌────────────────────────────────────┐  │
+    │       Study Project(s)             │  │
+    │                                    │  │
+    │  ┌─────────────┐  ┌────────────┐   │  │
+    │  │ craft-owned │  │ study-owned│   │  │
+    │  │             │  │            │   │  │
+    │  │ skills      │  │ CLAUDE.md  │   │  │
+    │  │ workflows   │  │ protocol   │   │  │
+    │  │ philosophy  │  │ methods    │   │  │
+    │  │ settings    │  │ data       │   │  │
+    │  │ hooks       │  │ decisions  │   │  │
+    │  └──────▲──────┘  └────────────┘   │  │
+    │         │                          │  │
+    └─────────┼──────────────────────────┘  │
+              │                             │
+              └──────── craft update ───────┘
+                        (on demand, refreshes
+                        craft-owned files only)
+```
+
 CRAFT pairs **workflows** with **skills**.
 
 **Workflows** are human-readable documents that describe how to carry out a research process — what to do, in what order, what decisions to document, and which skills to invoke at each step. There are few workflows, each covering a broad research activity (e.g., designing a statistical analysis plan, conducting a literature review).
@@ -62,7 +94,7 @@ CRAFT includes a self-directed learning pathway for clinician-researchers new to
 - **Platforms** — GitHub, Claude Code, command line
 - **Languages** — shell scripting, Python, SQL, regex
 
-See the [learning/](learning/) directory.
+See the [learn/](learn/) directory.
 
 ## Development
 
