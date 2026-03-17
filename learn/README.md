@@ -29,6 +29,7 @@ Several platforms offer structured courses relevant to these topics. We referenc
 
 | Topic | Overview |
 |---|---|
+| [Markdown](markdown.md) | Markdown is a plain-text formatting language used for documentation, README files, and research notes. It's how content is written in GitHub, CRAFT workflows, and most code-based projects. If you can write an email, you can write Markdown — it takes minutes to learn the basics. |
 | [Python](python.md) | Python is the default language for data work in research. It has mature libraries for statistics, data manipulation, and machine learning. You don't need to become a software engineer — but reading Python, understanding its logic, and modifying AI-generated code is essential for maintaining control of your pipeline. |
 | [SQL](sql.md) | SQL is the language for querying databases. If your research involves clinical data, administrative datasets, or any structured data source, you will encounter SQL. Understanding it lets you inspect, validate, and extract data directly rather than depending on someone else to pull it for you. |
 | [Regex](regex.md) | Regular expressions are patterns for matching text. They're used in data cleaning, text extraction, and search. A small investment in regex pays off every time you need to find, validate, or transform structured text — which in clinical research is often. |
