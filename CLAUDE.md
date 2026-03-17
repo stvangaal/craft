@@ -6,7 +6,7 @@ CRAFT (Community for Reproducible AI Frameworks and Tools) is a toolkit for repr
 
 ## Project Status
 
-Phase 0 — initial scaffolding. CLI (`craft bootstrap`, `craft update`) is functional. Templates are stubs being fleshed out.
+Phase 0 — initial scaffolding. CLI (`craft bootstrap`, `craft update`) is functional.
 
 ## Development Workflow
 
