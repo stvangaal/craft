@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# craft-test — run the craft-dev test suite
+#
+# Usage:
+#   craft-test              Run all tests
+#   craft-test <path>       Run tests at the specified path
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CRAFT_ROOT="$(realpath "$SCRIPT_DIR/..")"
+TEST_DIR="$CRAFT_ROOT/dev/tests"
+
+# ── Check dependencies ──────────────────────────────────────────
+if ! command -v bats &>/dev/null; then
+  echo "Error: bats-core is not installed."
+  echo ""
+  echo "Install via Homebrew:"
+  echo "  brew install bats-core"
+  echo ""
+  echo "Or see: https://github.com/bats-core/bats-core"
+  exit 1
+fi
+
+# ── Run tests ────────────────────────────────────────────────────
+TARGET="${1:-$TEST_DIR}"
+
+if [ ! -e "$TARGET" ]; then
+  echo "Error: Test path not found: $TARGET"
+  exit 1
+fi
+
+echo "Running tests: $TARGET"
+echo ""
+
+bats --recursive "$TARGET"

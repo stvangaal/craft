@@ -4,7 +4,7 @@
 
 CRAFT is a toolkit for clinician-researchers who want to use AI methods in their research with rigour. It provides structured workflows that describe how to carry out research processes step by step, paired with machine skills that handle specific tasks — literature search, data extraction, statistical coding — within those workflows.
 
-You use CRAFT by copying this repo to start a new research project. CRAFT manages the scaffolding (workflows, skills, templates) while you own the research (protocol, methods, data, decisions).
+You use CRAFT by copying this repo to start a new research project. CRAFT manages the scaffolding (workflows, skills) while you own the research (protocol, methods, data, decisions).
 
 ## Philosophy
 

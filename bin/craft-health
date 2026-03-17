@@ -1,0 +1,308 @@
+#!/usr/bin/env bash
+# craft-health — automated repo health checks for craft-dev
+#
+# Usage:
+#   craft-health                    Run all checks
+#   craft-health --skip-links       Skip external link checking
+#
+# Individual checks (used by tests):
+#   craft-health --check-internal-links <file>
+#   craft-health --check-external-links <file>
+#   craft-health --check-orphans <learn-dir>
+#   craft-health --check-learning-pages <learn-dir>
+#   craft-health --check-claude-md <repo-root>
+#   craft-health --check-cli <repo-root>
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CRAFT_ROOT="$(realpath "$SCRIPT_DIR/..")"
+
+SKIP_LINKS=false
+ISSUES=0
+CATEGORIES_CLEAN=0
+TOTAL_CATEGORIES=3
+
+# ── Parse flags ──────────────────────────────────────────────────
+
+for arg in "$@"; do
+  case "$arg" in
+    --skip-links) SKIP_LINKS=true ;;
+  esac
+done
+
+# ── Helpers ──────────────────────────────────────────────────────
+
+pass() { echo "✓ $1"; }
+fail() { echo "✗ $1"; ISSUES=$((ISSUES + 1)); }
+
+# ── Check: Internal Links ───────────────────────────────────────
+
+check_internal_links() {
+  local target="${1:-$CRAFT_ROOT}"
+  local exit_code=0
+  local files
+
+  if [ -f "$target" ]; then
+    files="$target"
+  else
+    files=$(find "$target" -name '*.md' -not -path '*/.git/*' -not -path '*/dev/tests/*' -not -path '*/dev/specs/*')
+  fi
+
+  for file in $files; do
+    local dir
+    dir="$(dirname "$file")"
+    local links
+    links=$(grep -oE '\[[^]]*\]\([^)]+\.md\)' "$file" 2>/dev/null | \
+      grep -oE '\([^)]+\.md\)' | tr -d '()' || true)
+
+    while IFS= read -r link; do
+      [ -z "$link" ] && continue
+      # Skip URLs
+      [[ "$link" == http* ]] && continue
+      local resolved="$dir/$link"
+      if [ ! -f "$resolved" ]; then
+        fail "Broken internal link: $file → $link (file not found)"
+        exit_code=1
+      fi
+    done <<< "$links"
+  done
+
+  return "$exit_code"
+}
+
+# ── Check: External Links ───────────────────────────────────────
+
+check_external_links() {
+  local target="${1:-$CRAFT_ROOT}"
+
+  if [ "$SKIP_LINKS" = true ]; then
+    return 0
+  fi
+
+  local files
+  local exit_code=0
+
+  if [ -f "$target" ]; then
+    files="$target"
+  else
+    files=$(find "$target" -name '*.md' -not -path '*/.git/*' -not -path '*/dev/tests/*' -not -path '*/dev/specs/*')
+  fi
+
+  for file in $files; do
+    local urls
+    urls=$(grep -oE 'https?://[^)]+' "$file" 2>/dev/null || true)
+
+    while IFS= read -r url; do
+      [ -z "$url" ] && continue
+      local code
+      code=$(curl -sI -o /dev/null -w '%{http_code}' -L --max-time 10 "$url" 2>/dev/null || echo "000")
+      if [[ ! "$code" =~ ^2 ]]; then
+        fail "Dead external link: $file — $url (HTTP $code)"
+        exit_code=1
+      fi
+    done <<< "$urls"
+  done
+
+  return "$exit_code"
+}
+
+# ── Check: Orphaned Files ───────────────────────────────────────
+
+check_orphans() {
+  local learn_dir="${1:-$CRAFT_ROOT/learn}"
+  local readme="$learn_dir/README.md"
+  local exit_code=0
+
+  if [ ! -f "$readme" ]; then
+    return 0
+  fi
+
+  for file in "$learn_dir"/*.md; do
+    [ ! -f "$file" ] && continue
+    local basename
+    basename="$(basename "$file")"
+    [ "$basename" = "README.md" ] && continue
+
+    if ! grep -q "$basename" "$readme"; then
+      fail "Orphaned file: $basename (not referenced in README.md)"
+      exit_code=1
+    fi
+  done
+
+  return "$exit_code"
+}
+
+# ── Check: Learning Page Sections ────────────────────────────────
+
+check_learning_pages() {
+  local learn_dir="${1:-$CRAFT_ROOT/learn}"
+  local exit_code=0
+  local required_sections=("## Getting Started" "## Quick References")
+
+  for file in "$learn_dir"/*.md; do
+    [ ! -f "$file" ] && continue
+    local basename
+    basename="$(basename "$file")"
+    [ "$basename" = "README.md" ] && continue
+
+    for section in "${required_sections[@]}"; do
+      if ! grep -q "^$section" "$file"; then
+        fail "$basename missing section: $section"
+        exit_code=1
+      fi
+    done
+  done
+
+  return "$exit_code"
+}
+
+# ── Check: CLAUDE.md Path References ─────────────────────────────
+
+check_claude_md() {
+  local repo_root="${1:-$CRAFT_ROOT}"
+  local claude_md="$repo_root/CLAUDE.md"
+  local exit_code=0
+
+  if [ ! -f "$claude_md" ]; then
+    return 0
+  fi
+
+  local paths
+  paths=$(grep -oE '`[^`]+`' "$claude_md" | tr -d '`' || true)
+
+  while IFS= read -r path; do
+    [ -z "$path" ] && continue
+    # Skip things that aren't file/directory paths
+    [[ "$path" == *" "* ]] && continue
+    [[ "$path" == /* ]] && continue
+    [[ "$path" == http* ]] && continue
+    # Skip CLI commands
+    [[ "$path" == craft\ * ]] && continue
+    [[ "$path" == craft ]] && continue
+    # Skip things without a slash or dot (likely not paths)
+    [[ "$path" != */* && "$path" != *.* ]] && continue
+
+    # Check if path exists relative to repo root
+    if [ ! -e "$repo_root/$path" ]; then
+      fail "CLAUDE.md references nonexistent path: $path"
+      exit_code=1
+    fi
+  done <<< "$paths"
+
+  return "$exit_code"
+}
+
+# ── Check: CLI Smoke Tests ───────────────────────────────────────
+
+check_cli() {
+  local repo_root="${1:-$CRAFT_ROOT}"
+  local test_dir="/tmp/craft-health-smoke-$$"
+  local exit_code=0
+
+  # Bootstrap
+  if "$repo_root/bin/craft" bootstrap "$test_dir" "health-test" >/dev/null 2>&1; then
+    # Verify expected files
+    for f in CLAUDE.md PHILOSOPHY.md CRAFT-WORKFLOW.md .craft-origin craft; do
+      if [ ! -e "$test_dir/$f" ]; then
+        fail "craft bootstrap: missing expected file $f"
+        exit_code=1
+      fi
+    done
+
+    # Update
+    if ! (cd "$test_dir" && ./craft update >/dev/null 2>&1); then
+      fail "craft update: exited non-zero"
+      exit_code=1
+    fi
+  else
+    fail "craft bootstrap: exited non-zero"
+    exit_code=1
+  fi
+
+  # Clean up
+  rm -rf "$test_dir"
+  return "$exit_code"
+}
+
+# ── Individual check mode (for tests) ────────────────────────────
+
+case "${1:-}" in
+  --check-internal-links)
+    check_internal_links "${2:-}"
+    exit $?
+    ;;
+  --check-external-links)
+    check_external_links "${2:-}"
+    exit $?
+    ;;
+  --check-orphans)
+    check_orphans "${2:-}"
+    exit $?
+    ;;
+  --check-learning-pages)
+    check_learning_pages "${2:-}"
+    exit $?
+    ;;
+  --check-claude-md)
+    check_claude_md "${2:-}"
+    exit $?
+    ;;
+  --check-cli)
+    check_cli "${2:-}"
+    exit $?
+    ;;
+esac
+
+# ── Full run ─────────────────────────────────────────────────────
+
+echo "## Content Integrity"
+
+content_ok=true
+check_internal_links || content_ok=false
+
+if [ "$SKIP_LINKS" = true ]; then
+  echo "  (external link check skipped)"
+else
+  check_external_links || content_ok=false
+fi
+
+check_orphans || content_ok=false
+
+if [ "$content_ok" = true ]; then
+  pass "All content integrity checks passed"
+  CATEGORIES_CLEAN=$((CATEGORIES_CLEAN + 1))
+fi
+
+echo ""
+echo "## Structure"
+
+structure_ok=true
+check_learning_pages || structure_ok=false
+check_claude_md || structure_ok=false
+
+if [ "$structure_ok" = true ]; then
+  pass "All structure checks passed"
+  CATEGORIES_CLEAN=$((CATEGORIES_CLEAN + 1))
+fi
+
+echo ""
+echo "## CLI"
+
+cli_ok=true
+check_cli || cli_ok=false
+
+if [ "$cli_ok" = true ]; then
+  pass "craft bootstrap — OK"
+  pass "craft update — OK"
+  CATEGORIES_CLEAN=$((CATEGORIES_CLEAN + 1))
+fi
+
+echo ""
+echo "---"
+echo "Health: $CATEGORIES_CLEAN/$TOTAL_CATEGORIES categories clean — $ISSUES issues found"
+
+if [ "$ISSUES" -gt 0 ]; then
+  exit 1
+fi
+exit 0

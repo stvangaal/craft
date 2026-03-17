@@ -5,7 +5,7 @@
 #   craft bootstrap <target-directory> [project-name]
 #   craft update
 #
-# bootstrap: Creates a new study project from craft templates.
+# bootstrap: Creates a new study project with craft scaffolding.
 # update:    Refreshes craft-owned files in an existing study project.
 
 set -euo pipefail
@@ -76,9 +76,6 @@ sync_craft_files() {
   copy_craft_owned "$CRAFT_ROOT/PHILOSOPHY.md" "$target/PHILOSOPHY.md"
   copy_craft_owned "$CRAFT_ROOT/CRAFT-WORKFLOW.md" "$target/CRAFT-WORKFLOW.md"
 
-  # Templates
-  copy_dir_craft_owned "$CRAFT_ROOT/templates" "$target/templates"
-
   # Hooks
   copy_dir_craft_owned "$CRAFT_ROOT/hooks" "$target/hooks"
 
@@ -142,7 +139,7 @@ do_bootstrap() {
   # Sync craft-owned files
   sync_craft_files "$target"
 
-  # Create study-owned files from templates
+  # Create study-owned files
   echo ""
   echo "Creating study-owned files..."
 
@@ -150,14 +147,53 @@ do_bootstrap() {
   if [ -f "$target/CLAUDE.md" ]; then
     echo "  exists (study-owned): CLAUDE.md"
   else
-    sed "s/{{PROJECT_NAME}}/$project_name/g" \
-      "$CRAFT_ROOT/templates/claude.md" > "$target/CLAUDE.md"
+    cat > "$target/CLAUDE.md" << CLAUDEMD
+# CLAUDE.md — $project_name
+
+## Project Overview
+
+<!-- Describe your study: research question, scope, approach. -->
+
+## Project Status
+
+Phase 0 — getting started.
+
+## Key Documents
+
+| Document | Purpose |
+|---|---|
+| \`STUDY-PROTOCOL.md\` | Study protocol |
+| \`DECISION-LOG.md\` | Decision log |
+| \`PHILOSOPHY.md\` | CRAFT principles (craft-owned) |
+| \`CRAFT-WORKFLOW.md\` | Workflow rules (craft-owned) |
+CLAUDEMD
     echo "  created: CLAUDE.md"
   fi
 
-  copy_study_owned "$CRAFT_ROOT/templates/study-protocol.md" "$target/STUDY-PROTOCOL.md"
-  copy_study_owned "$CRAFT_ROOT/templates/methods-register.md" "$target/METHODS-REGISTER.md"
-  copy_study_owned "$CRAFT_ROOT/templates/decision-log.md" "$target/DECISION-LOG.md"
+  if [ -f "$target/STUDY-PROTOCOL.md" ]; then
+    echo "  exists (study-owned): STUDY-PROTOCOL.md"
+  else
+    cat > "$target/STUDY-PROTOCOL.md" << 'STUDYPROTO'
+# Study Protocol
+
+<!-- This file will hold your study protocol. Use /study-protocol to generate one interactively or import an existing protocol. -->
+STUDYPROTO
+    echo "  created: STUDY-PROTOCOL.md"
+  fi
+
+  if [ -f "$target/DECISION-LOG.md" ]; then
+    echo "  exists (study-owned): DECISION-LOG.md"
+  else
+    cat > "$target/DECISION-LOG.md" << 'DECISIONLOG'
+# Decision Log
+
+<!-- Record methodological decisions as you make them. -->
+
+| Date | Decision | Alternatives | Rationale |
+|---|---|---|---|
+DECISIONLOG
+    echo "  created: DECISION-LOG.md"
+  fi
 
   # Record craft origin for update command
   echo "$CRAFT_ROOT" > "$target/.craft-origin"
@@ -192,13 +228,12 @@ WRAPPER
   echo "  $target/"
   echo "  ├── CLAUDE.md                    # Study-owned"
   echo "  ├── STUDY-PROTOCOL.md            # Study-owned"
-  echo "  ├── METHODS-REGISTER.md          # Study-owned"
   echo "  ├── DECISION-LOG.md              # Study-owned"
   echo "  ├── PHILOSOPHY.md                # Craft-owned"
   echo "  ├── CRAFT-WORKFLOW.md            # Craft-owned"
   echo "  ├── craft                        # Local CLI wrapper (runs ./craft update)"
   echo "  ├── .craft-origin                # Points to craft repo"
-  echo "  ├── templates/                   # Craft-owned"
+  echo "  ├── workflows/                   # Craft-owned"
   echo "  ├── hooks/                       # Craft-owned"
   echo "  ├── .claude/skills/              # Craft-owned (slash commands)"
   echo "  ├── .claude/settings.json        # Craft-owned (hooks config)"
@@ -207,8 +242,7 @@ WRAPPER
   echo ""
   echo "Next steps:"
   echo "  1. Edit CLAUDE.md with your project overview"
-  echo "  2. Fill in STUDY-PROTOCOL.md"
-  echo "  3. Run /status to see what craft suggests"
+  echo "  2. Run /status to see what craft suggests"
 }
 
 # ── Update ───────────────────────────────────────────────────────────
@@ -277,7 +311,7 @@ case "${1:-}" in
     echo "  craft update"
     echo ""
     echo "Commands:"
-    echo "  bootstrap    Create a new study project from craft templates"
+    echo "  bootstrap    Create a new study project with craft scaffolding"
     echo "  update       Refresh craft-owned files in the current study project"
     ;;
 esac

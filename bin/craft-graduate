@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# craft-graduate — sync craft-dev main to craft-public repo
+#
+# Usage:
+#   craft-graduate <path-to-craft-public>
+#
+# Reads .graduateignore for exclusion patterns, then rsyncs craft-dev
+# working tree to the target. Does NOT commit or push — you review
+# the diff in the target repo and commit manually.
+
+set -euo pipefail
+
+# ── Resolve craft-dev repo location ─────────────────────────────────
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CRAFT_DEV_ROOT="$(realpath "$SCRIPT_DIR/..")"
+
+if [ ! -f "$CRAFT_DEV_ROOT/.graduateignore" ]; then
+  echo "Error: Cannot find .graduateignore at $CRAFT_DEV_ROOT"
+  echo "Are you running this from the craft-dev repo?"
+  exit 1
+fi
+
+# ── Validate arguments ──────────────────────────────────────────────
+
+if [ $# -lt 1 ]; then
+  echo "Usage: craft-graduate <path-to-craft-public>"
+  echo ""
+  echo "Syncs the current craft-dev state to the craft public repo,"
+  echo "excluding paths listed in .graduateignore."
+  exit 1
+fi
+
+TARGET="$(realpath "$1")"
+
+if [ ! -d "$TARGET/.git" ]; then
+  echo "Error: $TARGET does not appear to be a git repository."
+  exit 1
+fi
+
+# ── Check we're on main ─────────────────────────────────────────────
+
+CURRENT_BRANCH="$(git -C "$CRAFT_DEV_ROOT" rev-parse --abbrev-ref HEAD)"
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "Error: craft-dev is on branch '$CURRENT_BRANCH', not 'main'."
+  echo "Switch to main before graduating."
+  exit 1
+fi
+
+# ── Check for uncommitted changes ───────────────────────────────────
+
+if ! git -C "$CRAFT_DEV_ROOT" diff --quiet || ! git -C "$CRAFT_DEV_ROOT" diff --cached --quiet; then
+  echo "Error: craft-dev has uncommitted changes."
+  echo "Commit or stash them before graduating."
+  exit 1
+fi
+
+# ── Build rsync exclude list from .graduateignore ───────────────────
+
+EXCLUDE_ARGS=()
+while IFS= read -r line; do
+  # Skip blank lines and comments
+  [[ -z "$line" || "$line" == \#* ]] && continue
+  EXCLUDE_ARGS+=(--exclude "$line")
+done < "$CRAFT_DEV_ROOT/.graduateignore"
+
+# Always exclude git metadata
+EXCLUDE_ARGS+=(--exclude ".git")
+
+# ── Sync ────────────────────────────────────────────────────────────
+
+echo "Graduating craft-dev → craft-public"
+echo "  Source: $CRAFT_DEV_ROOT"
+echo "  Target: $TARGET"
+echo ""
+
+# Dry run first to show what will change
+echo "Changes to apply:"
+echo ""
+rsync -av --delete --dry-run "${EXCLUDE_ARGS[@]}" "$CRAFT_DEV_ROOT/" "$TARGET/" \
+  | grep -v "^$" | grep -v "^sending" | grep -v "^sent " | grep -v "^total " \
+  | grep -v "^\./$" || true
+
+echo ""
+read -p "Apply these changes? [y/N] " confirm
+if [[ "$confirm" != [yY] ]]; then
+  echo "Aborted."
+  exit 0
+fi
+
+rsync -av --delete "${EXCLUDE_ARGS[@]}" "$CRAFT_DEV_ROOT/" "$TARGET/"
+
+echo ""
+echo "Done. Changes applied to $TARGET."
+echo ""
+echo "Next steps:"
+echo "  cd $TARGET"
+echo "  git diff              # review changes"
+echo "  git add -A && git commit"
+echo "  git push"

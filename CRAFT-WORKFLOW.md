@@ -14,13 +14,12 @@
 Every file in a craft study project is either **craft-owned** or **study-owned**.
 
 - **Craft-owned files** are managed by the craft repo. They are overwritten by `craft update`. Do not customize them per-study — your changes will be lost on the next update.
-- **Study-owned files** belong to the study. They are created once by `craft bootstrap` from templates, then never touched by craft again.
+- **Study-owned files** belong to the study. They are created once by `craft bootstrap`, then never touched by craft again.
 
 ### Craft-owned
 
 - `PHILOSOPHY.md`
 - `CRAFT-WORKFLOW.md`
-- `templates/`
 - `skills/`
 - `hooks/`
 - `.claude/settings.json`
@@ -29,14 +28,13 @@ Every file in a craft study project is either **craft-owned** or **study-owned**
 
 - `CLAUDE.md`
 - `STUDY-PROTOCOL.md`
-- `METHODS-REGISTER.md`
 - `DECISION-LOG.md`
 - `methods/` (researcher's work)
 - `data/` (research data)
 
 ## Method Types
 
-Craft supports five method types. Each has a Tier 2 method template in `templates/methods/` and associated skills in `skills/`.
+Craft supports five method types. Each has associated skills in `skills/`.
 
 1. **Literature Review** — search, screen, extract, synthesize
 2. **Data Pipeline** — source, extract, clean, transform, validate
