@@ -2,9 +2,9 @@
 
 **Community for Reproducible AI Frameworks and Tools**
 
-CRAFT is a toolkit for clinician-researchers who want to use AI methods in their research with rigour. It provides structured workflows that describe how to carry out research processes step by step, paired with machine skills that handle specific tasks — literature search, data extraction, statistical coding — within those workflows.
+CRAFT helps clinician-researchers use AI in their work — rigorously and reproducibly. It gives you step-by-step workflows for common research tasks (literature review, data extraction, statistical analysis) and AI skills that handle the mechanical parts.
 
-You use CRAFT by copying this repo to start a new research project. CRAFT manages the scaffolding (workflows, skills) while you own the research (protocol, methods, data, decisions).
+You copy this repo to start a new research project. CRAFT manages the scaffolding; you own the research.
 
 ## Philosophy
 
@@ -19,8 +19,9 @@ CRAFT is built on four beliefs. The full text is in [PHILOSOPHY.md](PHILOSOPHY.m
 
 ### Prerequisites
 
-- macOS or Linux
-- Git
+- **macOS or Linux** — works natively
+- **Windows** — install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) first, then run everything inside your Linux environment
+- [Git](https://git-scm.com/)
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (CLI)
 
 ### Create a New Study Project
@@ -47,44 +48,22 @@ This refreshes craft-owned files (workflows, skills) without touching your resea
 ## How CRAFT Works
 
 ```
-                      ┌───────────────────┐
-                      │   craft (repo)    │
-                      │                   │
-                      │ skills, CLI,      │
-                      │ workflows, docs   │
-                      └──────┬───────┬────┘
-                             │       │
-               craft bootstrap       │
-               (one-time setup)      │
-                             │       │
-                             ▼       │
-    ┌────────────────────────────────────┐  │
-    │       Study Project(s)             │  │
-    │                                    │  │
-    │  ┌─────────────┐  ┌────────────┐   │  │
-    │  │ craft-owned │  │ study-owned│   │  │
-    │  │             │  │            │   │  │
-    │  │ skills      │  │ CLAUDE.md  │   │  │
-    │  │ workflows   │  │ protocol   │   │  │
-    │  │ philosophy  │  │ methods    │   │  │
-    │  │ settings    │  │ data       │   │  │
-    │  │ hooks       │  │ decisions  │   │  │
-    │  └──────▲──────┘  └────────────┘   │  │
-    │         │                          │  │
-    └─────────┼──────────────────────────┘  │
-              │                             │
-              └──────── craft update ───────┘
-                        (on demand, refreshes
-                        craft-owned files only)
+craft (this repo)           Your Study Project
+┌──────────────────┐        ┌─────────────────────────────┐
+│ workflows        │  copy  │  craft-owned  │  study-owned │
+│ skills           │───────▶│  workflows    │  protocol    │
+│ CLI              │        │  skills       │  methods     │
+│ learning pages   │        │  settings     │  data        │
+└──────────────────┘        └──────┬────────┴─────────────-┘
+                                   │
+          craft update ◀───────────┘
+          (refreshes craft-owned files,
+           never touches your research)
 ```
 
-CRAFT pairs **workflows** with **skills**.
+**Workflows** describe how to carry out a research process — what to do, in what order, and what to document. **Skills** are instructions that Claude Code executes — running searches, extracting data, generating code. A single workflow invokes several skills across its steps.
 
-**Workflows** are human-readable documents that describe how to carry out a research process — what to do, in what order, what decisions to document, and which skills to invoke at each step. There are few workflows, each covering a broad research activity (e.g., designing a statistical analysis plan, conducting a literature review).
-
-**Skills** are machine-readable instructions that Claude Code can execute — running searches, generating test data, structuring extracted data. Skills are atomic: each one does a specific job. A single workflow may invoke several skills across its steps.
-
-The researcher directs the process. The AI handles the mechanical parts. Every methodological decision is recorded.
+You direct the process. The AI handles the mechanical parts. Every decision is recorded.
 
 ## Learning Pathway
 
@@ -96,23 +75,6 @@ CRAFT includes a self-directed learning pathway for clinician-researchers new to
 
 See the [learn/](learn/) directory.
 
-## Development
+## Contributing
 
-CRAFT is maintained by a small team. If you're contributing to craft itself (not using it for a study), this section is for you.
-
-### Repo Structure
-
-```
-craft/
-├── bin/craft              # CLI (bootstrap, update)
-├── workflows/             # Human-readable research workflows
-├── .claude/skills/        # Machine skills (Claude Code slash commands)
-├── .claude/settings.json  # Claude Code configuration
-├── learning/              # Self-directed learning resources
-├── PHILOSOPHY.md          # The four beliefs
-└── CRAFT-WORKFLOW.md      # File ownership and workflow rules
-```
-
-### Making Changes
-
-Changes to craft-owned files propagate to study projects via `craft update`. Test changes by bootstrapping a fresh project and verifying the update path works.
+CRAFT is maintained by a small team. If you're interested in contributing, [open an issue](https://github.com/stvangaal/craft/issues) to start a conversation.
