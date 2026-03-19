@@ -79,6 +79,14 @@ sync_craft_files() {
   # Hooks
   copy_dir_craft_owned "$CRAFT_ROOT/hooks" "$target/hooks"
 
+  # Git hooks (pre-commit secrets scanning, etc.)
+  if [ -d "$CRAFT_ROOT/.githooks" ]; then
+    copy_dir_craft_owned "$CRAFT_ROOT/.githooks" "$target/.githooks"
+    # Configure git to use the project hooks directory
+    (cd "$target" && git config core.hooksPath .githooks 2>/dev/null || true)
+    echo "  configured: git core.hooksPath = .githooks"
+  fi
+
   # Claude Code settings
   if [ -d "$CRAFT_ROOT/.claude" ]; then
     mkdir -p "$target/.claude"
@@ -86,9 +94,18 @@ sync_craft_files() {
     if [ -d "$CRAFT_ROOT/.claude/hooks" ]; then
       copy_dir_craft_owned "$CRAFT_ROOT/.claude/hooks" "$target/.claude/hooks"
     fi
-    # Sync skills subdirectory if it exists
+    # Sync skills subdirectory if it exists (exclude dev-* skills)
     if [ -d "$CRAFT_ROOT/.claude/skills" ]; then
-      copy_dir_craft_owned "$CRAFT_ROOT/.claude/skills" "$target/.claude/skills"
+      mkdir -p "$target/.claude/skills"
+      for skill_dir in "$CRAFT_ROOT/.claude/skills"/*/; do
+        skill_name="$(basename "$skill_dir")"
+        # Skip dev-* skills — these are project-internal, not for study projects
+        if [[ "$skill_name" == dev-* ]]; then
+          echo "  skipped (dev-only): $skill_name/"
+          continue
+        fi
+        copy_dir_craft_owned "$skill_dir" "$target/.claude/skills/$skill_name"
+      done
     fi
     # Always overwrite settings.json (craft-owned)
     if [ -f "$CRAFT_ROOT/.claude/settings.json" ]; then

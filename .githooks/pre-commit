@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Pre-commit hook: scan staged files for potential secrets.
+# Install: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+# ── Patterns that suggest secrets ────────────────────────────────────
+
+PATTERNS=(
+  # API keys
+  'sk-[A-Za-z0-9]{20,}'
+  'ghp_[A-Za-z0-9]{36}'
+  'gho_[A-Za-z0-9]{36}'
+  'github_pat_[A-Za-z0-9_]{82}'
+  'xox[bpors]-[A-Za-z0-9-]{10,}'
+
+  # Generic key/token/secret assignments
+  'api[_-]?key\s*[=:]\s*["\x27][^"\x27]{8,}'
+  'api[_-]?secret\s*[=:]\s*["\x27][^"\x27]{8,}'
+  'token\s*[=:]\s*["\x27][^"\x27]{8,}'
+  'password\s*[=:]\s*["\x27][^"\x27]{8,}'
+  'passwd\s*[=:]\s*["\x27][^"\x27]{8,}'
+  'secret\s*[=:]\s*["\x27][^"\x27]{8,}'
+
+  # Auth headers
+  'bearer\s+[A-Za-z0-9_.~+/=-]{20,}'
+  'authorization\s*[=:]\s*["\x27][^"\x27]{8,}'
+
+  # Private keys
+  'BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY'
+
+  # AWS
+  'AKIA[0-9A-Z]{16}'
+  'aws_secret_access_key\s*[=:]\s*[^\s]{20,}'
+)
+
+# ── Scan staged diff ────────────────────────────────────────────────
+
+COMBINED_PATTERN=$(IFS='|'; echo "${PATTERNS[*]}")
+
+# Get staged diff (added lines only)
+STAGED_DIFF=$(git diff --cached --diff-filter=ACM -U0 -- . ':!.githooks/pre-commit' || true)
+
+if [ -z "$STAGED_DIFF" ]; then
+  exit 0
+fi
+
+# Check for .env files being committed
+ENV_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.env($|\.)' || true)
+if [ -n "$ENV_FILES" ]; then
+  echo ""
+  echo "🚫 BLOCKED: .env file(s) staged for commit:"
+  echo "$ENV_FILES"
+  echo ""
+  echo "Remove with: git reset HEAD <file>"
+  exit 1
+fi
+
+# Scan for secret patterns (only added lines)
+MATCHES=$(echo "$STAGED_DIFF" | grep -nE '^\+' | grep -v '^\+\+\+' | grep -iE "$COMBINED_PATTERN" || true)
+
+if [ -n "$MATCHES" ]; then
+  echo ""
+  echo "⚠️  Potential secrets detected in staged changes:"
+  echo ""
+  echo "$MATCHES" | head -20
+  echo ""
+  echo "If these are false positives, commit with --no-verify."
+  echo "If real secrets, remove them and use environment variables instead."
+  exit 1
+fi
+
+# Check for long base64-like strings (>100 chars of base64 alphabet)
+B64_MATCHES=$(echo "$STAGED_DIFF" | grep -nE '^\+' | grep -v '^\+\+\+' | grep -E '[A-Za-z0-9+/=]{100,}' || true)
+
+if [ -n "$B64_MATCHES" ]; then
+  echo ""
+  echo "⚠️  Long base64-like string detected (possible encoded secret):"
+  echo ""
+  echo "$B64_MATCHES" | head -5
+  echo ""
+  echo "If this is a false positive, commit with --no-verify."
+  exit 1
+fi

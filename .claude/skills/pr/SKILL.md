@@ -1,32 +1,38 @@
 ---
 name: pr
-description: Use when ready to create a pull request — runs security review, then creates the PR. Replaces manual gh pr create.
+description: Use when ready to create a pull request — handles push and PR creation. Suggests security review when agent-facing code is modified.
 ---
 
 # Create Pull Request
 
-Runs the full pre-PR workflow: security review, commit, push, and PR creation.
+Handles the full pre-PR workflow: health check, push, and PR creation.
 
 ## Process
 
 1. **Check branch** — verify you're not on `main`. If you are, stop.
 
-2. **Run security review** — invoke the `/security-review` process:
-   - Identify changed files via `git diff main...HEAD --name-only`
-   - Analyze each file for prompt injection, malicious code, and secrets
-   - Present flags to the reviewer for approval
-   - Commit the review record to `dev/security-reviews/`
-   - Update `dev/security-decisions.md` with any approved patterns
+2. **Run health check** — if `bin/craft-health` exists, run it and address any failures before proceeding.
 
-3. **Push the branch** — push to origin with `-u` flag if not already tracking.
+3. **Check for agent-facing changes** — run `git diff main...HEAD --name-only` and check if any changed files are in `.claude/`, `hooks/`, `.githooks/`, or `bin/`. If so, suggest running `/security-review` before proceeding. Ask the user — don't block.
 
-4. **Create the PR** — use `gh pr create` with:
+4. **Review changes** — show `git log main...HEAD --oneline` so the user can confirm the commits that will be in the PR.
+
+5. **Push the branch** — push to origin with `-u` flag if not already tracking.
+
+6. **Create the PR** — use `gh pr create` with:
    - A concise title (under 70 characters)
    - A body summarizing changes, referencing the relevant issue
-   - Include the security review summary
+   - Format:
+     ```
+     ## Summary
+     - [bullet points of what changed and why]
+
+     Closes #<issue-number>
+     ```
 
 ## Notes
 
-- If the security review raises flags that the reviewer rejects, stop and fix them before proceeding.
-- If the branch already has a security review record, ask the reviewer if they want to re-run it (files may have changed since the last review).
-- CI will verify the security review record exists — this skill ensures it's always there.
+- If the health check raises failures, fix them before proceeding.
+- If `bin/craft-health` does not exist, skip the health check step.
+- Keep PRs focused — one feature or fix per PR.
+- This skill does NOT run security review automatically — it suggests it when relevant files are changed.
