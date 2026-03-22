@@ -180,6 +180,9 @@ check_claude_md() {
     # Skip CLI commands
     [[ "$path" == craft\ * ]] && continue
     [[ "$path" == craft ]] && continue
+    # Skip git branch names and prefixes (e.g., feat/, fix/ci-health-checks)
+    [[ "$path" == */ ]] && continue
+    [[ "$path" =~ ^(feat|fix|docs|chore|release|hotfix)/ ]] && continue
     # Skip things without a slash or dot (likely not paths)
     [[ "$path" != */* && "$path" != *.* ]] && continue
 
