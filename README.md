@@ -8,12 +8,13 @@ You copy this repo to start a new research project. CRAFT manages the scaffoldin
 
 ## Philosophy
 
-CRAFT is built on four beliefs. The full text is in [PHILOSOPHY.md](PHILOSOPHY.md).
+CRAFT is built on five beliefs. The full text is in [PHILOSOPHY.md](PHILOSOPHY.md).
 
 1. **Learn it yourself or lose control.** These skills belong with the people asking the research questions.
 2. **Trust but verify.** A knowledgeable orchestrator is not optional.
 3. **Standardize or repeat the reproducibility crisis.** Structured, auditable workflows are a scientific integrity question.
 4. **Start by automating the boring stuff.** Redirect your time toward the parts of research that require human judgment.
+5. **Walk before you run.** Develop and test workflows on simple datasets before progressing to production problems.
 
 ## Getting Started
 

@@ -8,7 +8,7 @@ CRAFT (Community for Reproducible AI Frameworks and Tools) is a toolkit for repr
 
 | Document | Purpose |
 |---|---|
-| `PHILOSOPHY.md` | The four beliefs (from CRAFT charter) |
+| `PHILOSOPHY.md` | The five beliefs (from CRAFT charter) |
 | `CRAFT-WORKFLOW.md` | Governing rules for craft projects |
 | `learn/` | Self-directed learning pathway for clinician-researchers |
 | `.claude/skills/` | Machine skills (Claude Code slash commands) |

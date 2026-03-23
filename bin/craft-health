@@ -73,6 +73,28 @@ check_internal_links() {
 
 # ── Check: External Links ───────────────────────────────────────
 
+# Domains that block automated requests (curl) with 403/503 but are
+# known-good links. Add entries as bare domains — subdomains match too.
+EXTERNAL_LINK_DOMAIN_ALLOWLIST=(
+  "datacamp.com"         # 403 — bot protection on all pages
+  "pythoncheatsheet.org" # 403 — bot protection
+  "claude.ai"            # 403 — requires browser session
+  "doi.org"              # 403 — some DOIs block HEAD requests
+  "amazon.com"           # 503 — intermittent bot blocking
+  "aka.ms"               # 403 — Microsoft redirect service
+  "github.com/stvangaal/craft-dev" # 404 — private repo, valid for authenticated users
+)
+
+url_is_allowlisted() {
+  local url="$1"
+  for domain in "${EXTERNAL_LINK_DOMAIN_ALLOWLIST[@]}"; do
+    if [[ "$url" == *"$domain"* ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 check_external_links() {
   local target="${1:-$CRAFT_ROOT}"
 
@@ -95,6 +117,9 @@ check_external_links() {
 
     while IFS= read -r url; do
       [ -z "$url" ] && continue
+      if url_is_allowlisted "$url"; then
+        continue
+      fi
       local code
       code=$(curl -sI -o /dev/null -w '%{http_code}' -L --max-time 10 "$url" 2>/dev/null || echo "000")
       if [[ ! "$code" =~ ^2 ]]; then
@@ -139,12 +164,26 @@ check_learning_pages() {
   local learn_dir="${1:-$CRAFT_ROOT/learn}"
   local exit_code=0
   local required_sections=("## Getting Started" "## Quick References")
+  local readme="$learn_dir/README.md"
+
+  # Only check topic pages — files linked from the "## Topics" section of
+  # README.md. How-to guides and other pages have different structures.
+  local topic_files=""
+  if [ -f "$readme" ]; then
+    topic_files=$(sed -n '/^## Topics/,/^## /p' "$readme" | \
+      grep -oE '\([^)]+\.md\)' | tr -d '()' || true)
+  fi
 
   for file in "$learn_dir"/*.md; do
     [ ! -f "$file" ] && continue
     local basename
     basename="$(basename "$file")"
     [ "$basename" = "README.md" ] && continue
+
+    # Skip files that aren't topic pages
+    if [ -n "$topic_files" ] && ! echo "$topic_files" | grep -qx "$basename"; then
+      continue
+    fi
 
     for section in "${required_sections[@]}"; do
       if ! grep -q "^$section" "$file"; then

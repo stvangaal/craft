@@ -18,3 +18,7 @@ Ad hoc AI workflows are no more reproducible than ad hoc manual methods — they
 
 Researchers who do not learn to use AI effectively will spend their finite time on work that is rapidly becoming automatable — manual literature screening, hand extraction of data from charts, routine statistical coding. Their peers who adopt these tools will do the same work in a fraction of the time and redirect their effort toward the parts of research that genuinely require human judgment: asking the right questions, interpreting findings in clinical context, and deciding what matters.
 
+## 5. Walk before you run
+
+New tools reward methodical adoption more than ambitious leaps. Researchers should develop and validate their workflows on simple, well-understood datasets before applying them to experimental or production-scale problems. A method that works reliably on a small example is evidence; a method that was only ever tried on the real thing is a gamble. Deliberate progression — toy data, then pilot data, then the actual study — builds the understanding needed to diagnose problems when they inevitably appear at scale.
+

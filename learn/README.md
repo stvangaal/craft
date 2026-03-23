@@ -41,3 +41,11 @@ Several platforms offer structured courses relevant to these topics. We referenc
 | [Literature search](literature-search.md) | AI can accelerate literature search from weeks to hours, but speed without structure produces noise. This topic covers how to formulate reproducible search strategies, execute them programmatically, and document what you did so others can verify it. |
 | [Data extraction](data-extraction.md) | Extracting structured data from clinical records, PDFs, and published literature is where AI has the most immediate impact on research productivity. This topic covers how to design extraction schemas, validate AI-generated output, and build pipelines that are auditable and reproducible. |
 | [Reproducible analysis](reproducible-analysis.md) | A reproducible analysis is one that someone else — or future you — can re-run and get the same results. This topic covers the practices that make that possible: scripted analyses, version-controlled code, documented dependencies, and clear separation of data from logic. |
+
+## How-To Guides
+
+Standalone procedural guides for specific setup tasks.
+
+| Guide | Purpose |
+|---|---|
+| [Python environments](python-environments.md) | Set up a virtual environment and Jupyter kernel for CRAFT notebooks |
